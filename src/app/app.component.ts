@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs/operators'
 import { Post } from './post.model';
+import { PostsService } from './posts.service';
 
 @Component({
   selector: 'app-root',
@@ -10,46 +11,41 @@ import { Post } from './post.model';
 })
 export class AppComponent implements OnInit {
   loadedPosts = [];
+  isFetching = false
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient,
+              private postsService: PostsService) {}
 
-  ngOnInit() {}
-
-  onCreatePost(postData: Post) {
-    // Send Http request
-    this.http.post(
-        'https://ng-test-f4130-default-rtdb.firebaseio.com/posts.json', 
-        postData
-    ).subscribe( responseData => {
-      console.log(responseData)
+  ngOnInit() {
+    this.isFetching = true
+    this.postsService.fetchPosts().subscribe(posts =>{
+      this.isFetching = false
+      this.loadedPosts = posts
     })
   }
 
+  onCreatePost(postData: Post) {
+    console.log("sending posst " + postData.title, postData.content)
+    this.postsService.createAndStorePost(postData.title, postData.content)
+    
+  }
+
   onFetchPosts() {
-    // Send Http request
-    this.fetchPosts()
+    this.isFetching = true
+    this.postsService.fetchPosts().subscribe(posts =>{
+      this.isFetching = false
+      this.loadedPosts = posts
+    })
   }
 
   onClearPosts() {
-    // Send Http request
+    this.postsService.deletePosts().subscribe(()=>{
+      this.loadedPosts = []
+    })
   }
 
   private fetchPosts(){
-    this.http.get('https://ng-test-f4130-default-rtdb.firebaseio.com/posts.json')
-      .pipe(
-        // map(responseData =>{
-        map(responseData =>{
-         const postsArray = []
-         for(let key in responseData){
-           if(responseData.hasOwnProperty(key)){
-            postsArray.push({...responseData[key], id: key})
-           }
-         }
-         return postsArray
-      }))
-      .subscribe( response=>{
-        this.loadedPosts = response
-        // console.log(response)
-      })
+    this.isFetching = true
+    return this.postsService.fetchPosts()
   }
 }
